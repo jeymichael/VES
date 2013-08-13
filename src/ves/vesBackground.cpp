@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -31,6 +32,7 @@
 #include "vesProjectionUniform.h"
 #include "vesShader.h"
 #include "vesShaderProgram.h"
+#include "vesTexture.h"
 #include "vesUniform.h"
 #include "vesVertexAttribute.h"
 #include "vesVertexAttributeKeys.h"
@@ -49,51 +51,19 @@ public:
     m_modelViewUniform(new vesModelViewUniform()),
     m_projectionUniform(new vesProjectionUniform()),
     m_positionVertexAttribute(new vesPositionVertexAttribute()),
-    m_normalVertexAttribute(new vesNormalVertexAttribute()),
     m_colorVertexAttribute(new vesColorVertexAttribute()),
     m_textureCoodinateAttribute(new vesTextureCoordinateVertexAttribute()),
     m_depth(new vesDepth())
   {
-    this->m_depth->disable();
-
-    const std::string vertexShaderSource =
-      "uniform highp mat4 modelViewMatrix;\n \
-       uniform highp mat4 projectionMatrix;\n \
-       attribute highp vec4 vertexPosition;\n \
-       attribute mediump vec4 vertexColor;\n \
-       attribute mediump vec4 vertexTextureCoordinate;\n \
-       varying mediump vec2 textureCoordinate;\n \
-       varying mediump vec4 varColor;\n \
-       void main()\n \
-       {\n \
-         gl_Position = vertexPosition;\n \
-         textureCoordinate = vertexTextureCoordinate.xy;\n \
-         varColor = vertexColor;\n \
-       }";
-
-    const std::string fragmentShaderSource =
-      "varying mediump vec2 textureCoordinate;\n \
-       varying mediump vec4 varColor;\n \
-       void main()\n \
-       {\n \
-         gl_FragColor = varColor;\n \
-       }";
-
-    this->m_vertexShader->setShaderSource(vertexShaderSource);
-    this->m_fragmentShader->setShaderSource(fragmentShaderSource);
-
     this->m_shaderProgram->addShader(this->m_vertexShader);
     this->m_shaderProgram->addShader(this->m_fragmentShader);
     this->m_shaderProgram->addUniform(this->m_modelViewUniform);
     this->m_shaderProgram->addUniform(this->m_projectionUniform);
-    this->m_shaderProgram->addVertexAttribute(this->m_positionVertexAttribute,
-                                              vesVertexAttributeKeys::Position);
-    this->m_shaderProgram->addVertexAttribute(this->m_normalVertexAttribute,
-                                              vesVertexAttributeKeys::Normal);
-    this->m_shaderProgram->addVertexAttribute(this->m_colorVertexAttribute,
-                                              vesVertexAttributeKeys::Color);
-    this->m_shaderProgram->addVertexAttribute(this->m_textureCoodinateAttribute,
-                                              vesVertexAttributeKeys::TextureCoordinate);
+    this->m_shaderProgram->addVertexAttribute(
+      this->m_positionVertexAttribute, vesVertexAttributeKeys::Position);
+    this->m_shaderProgram->addVertexAttribute(
+      this->m_normalVertexAttribute, vesVertexAttributeKeys::Normal);
+    this->m_depth->disable();
   }
 
   ~vesInternal()
@@ -107,6 +77,62 @@ public:
                         const vesVector4f &bottomColor);
   vesSharedPtr<vesGeometryData> createBackgroundPlane(
     const vesVector4f &topColor, const vesVector4f &bottomColor);
+
+  void createShaderSourceForNonTexturedPlane(std::string &vertShaderText,
+                                             std::string &fragShaderText)
+  {
+    const std::string vertexShaderSource =
+      "uniform highp mat4 modelViewMatrix;\n \
+       uniform highp mat4 projectionMatrix;\n \
+       attribute highp vec4 vertexPosition;\n \
+       attribute mediump vec4 vertexColor;\n \
+       varying mediump vec4 varColor;\n \
+       void main()\n \
+       {\n \
+         gl_Position = vertexPosition;\n \
+         varColor = vertexColor;\n \
+       }";
+
+    const std::string fragmentShaderSource =
+      "varying mediump vec4 varColor;\n \
+       void main()\n \
+       {\n \
+         gl_FragColor = varColor;\n \
+       }";
+
+    vertShaderText = vertexShaderSource;
+    fragShaderText = fragmentShaderSource;
+  }
+
+  void createShaderSourceForTexturedPlane(std::string &vertShaderText,
+                                          std::string &fragShaderText)
+  {
+    const std::string vertexShaderSource =
+      "uniform highp mat4 modelViewMatrix;\n \
+       uniform highp mat4 projectionMatrix;\n \
+       attribute highp vec4 vertexPosition;\n \
+       attribute mediump vec3 vertexTextureCoordinate;\n \
+       varying mediump vec2 textureCoordinate;\n \
+       void main()\n \
+       {\n \
+         gl_Position = vertexPosition;\n \
+         textureCoordinate = vertexTextureCoordinate.xy;\n \
+       }";
+
+    const std::string fragmentShaderSource =
+       "varying mediump vec2 textureCoordinate;\n \
+        uniform highp sampler2D image;\n \
+       void main()\n \
+       {\n \
+          gl_FragColor = texture2D(image, textureCoordinate);\n \
+       }";
+
+    vertShaderText = vertexShaderSource;
+    fragShaderText = fragmentShaderSource;
+  }
+
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 
   vesSharedPtr<vesActor> m_backgroundActor;
   vesSharedPtr<vesMapper> m_backgroundMapper;
@@ -122,6 +148,8 @@ public:
   vesSharedPtr<vesTextureCoordinateVertexAttribute> m_textureCoodinateAttribute;
   vesSharedPtr<vesGeometryData> m_backgroundPlaneData;
   vesSharedPtr<vesDepth> m_depth;
+  vesSharedPtr<vesImage> m_image;
+  vesSharedPtr<vesTexture> m_texture;
 
   vesVector4f m_topColor;
   vesVector4f m_bottomColor;
@@ -141,6 +169,26 @@ void vesBackground::vesInternal::createBackground(const vesVector4f &topColor,
 
   this->m_backgroundPlaneData =
     this->createBackgroundPlane(topColor, bottomColor);
+
+  std::string vertShaderText;
+  std::string fragShaderText;
+
+  if(!this->m_image)
+  {
+    this->createShaderSourceForNonTexturedPlane(vertShaderText, fragShaderText);
+    this->m_shaderProgram->addVertexAttribute(
+      this->m_colorVertexAttribute, vesVertexAttributeKeys::Color);
+  }
+  else
+  {
+    this->createShaderSourceForTexturedPlane(vertShaderText, fragShaderText);
+    this->m_shaderProgram->addVertexAttribute(
+      this->m_textureCoodinateAttribute,
+      vesVertexAttributeKeys::TextureCoordinate);
+  }
+
+  this->m_vertexShader->setShaderSource(vertShaderText);
+  this->m_fragmentShader->setShaderSource(fragShaderText);
 }
 
 
@@ -160,6 +208,13 @@ void vesBackground::vesInternal::createBackground(vesBackground *background,
   this->m_backgroundMaterial->addAttribute(this->m_shaderProgram);
   this->m_backgroundMaterial->addAttribute(this->m_depth);
 
+  if(this->m_image)
+  {
+    this->m_texture = vesSharedPtr<vesTexture>(new vesTexture());
+    this->m_texture->setImage(this->m_image);
+    this->m_backgroundMaterial->addAttribute(this->m_texture);
+  }
+
   background->addChild(this->m_backgroundActor);
 }
 
@@ -168,28 +223,28 @@ vesSharedPtr<vesGeometryData> vesBackground::vesInternal::createBackgroundPlane(
   const vesVector4f &topColor, const vesVector4f &bottomColor)
 {
   vesGeometryData::Ptr backgroundGeometryData (new vesGeometryData());
-  vesSourceDataP3N3C3f::Ptr sourceData(new vesSourceDataP3N3C3f());
+  vesSourceDataP3T3C3f::Ptr sourceData(new vesSourceDataP3T3C3f());
 
   // Points.
-  vesVertexDataP3N3C3f v1;
+  vesVertexDataP3T3C3f v1;
   v1.m_position = vesVector3f(-1.0f, -1.0f, 0.0f);
-  v1.m_normal = vesVector3f(0.0f, 0.0f, 1.0f);
   v1.m_color = vesVector3f(bottomColor[0], bottomColor[1], bottomColor[2]);
+  v1.m_texureCoordinates = vesVector3f(0.0f, 0.0f, 0.0f);
 
-  vesVertexDataP3N3C3f v2;
+  vesVertexDataP3T3C3f v2;
   v2.m_position = vesVector3f(1.0f, -1.0f, 0.0f);
-  v2.m_normal = vesVector3f(0.0f, 0.0f, 1.0f);
   v2.m_color = vesVector3f(bottomColor[0], bottomColor[1], bottomColor[2]);
+  v2.m_texureCoordinates = vesVector3f(1.0f, 0.0f, 0.0f);
 
-  vesVertexDataP3N3C3f v3;
+  vesVertexDataP3T3C3f v3;
   v3.m_position = vesVector3f(1.0f, 1.0f, 0.0f);
-  v3.m_normal = vesVector3f(0.0f, 0.0f, 1.0f);
   v3.m_color = vesVector3f(topColor[0], topColor[1], topColor[2]);
+  v3.m_texureCoordinates = vesVector3f(1.0f, 1.0f, 0.0f);
 
-  vesVertexDataP3N3C3f v4;
+  vesVertexDataP3T3C3f v4;
   v4.m_position = vesVector3f(-1.0f, 1.0f, 0.0f);
-  v4.m_normal = vesVector3f(0.0f, 0.0f, 1.0f);
   v4.m_color = vesVector3f(topColor[0], topColor[1], topColor[2]);
+  v4.m_texureCoordinates = vesVector3f(0.0f, 1.0f, 0.0f);
 
   sourceData->pushBack(v1);
   sourceData->pushBack(v2);
@@ -198,10 +253,15 @@ vesSharedPtr<vesGeometryData> vesBackground::vesInternal::createBackgroundPlane(
 
   // Triangle cells.
   vesPrimitive::Ptr triangles (new vesPrimitive());
-  triangles->pushBackIndices(0, 3, 2);
-  triangles->pushBackIndices(1, 0, 2);
   triangles->setPrimitiveType(vesPrimitiveRenderType::Triangles);
+  triangles->setIndicesValueType(vesPrimitiveIndicesValueType::UnsignedShort);
   triangles->setIndexCount(3);
+  triangles->setIndicesValueType(vesPrimitiveIndicesValueType::UnsignedShort);
+
+  vesIndices<unsigned short>::Ptr triangleIndices  (new vesIndices<unsigned short>());
+  triangleIndices->pushBackIndices(0, 3, 2);
+  triangleIndices->pushBackIndices(1, 0, 2);
+  triangles->setVesIndices(triangleIndices);
 
   backgroundGeometryData->setName("BackgroundData");
   backgroundGeometryData->addSource(sourceData);
@@ -228,19 +288,43 @@ vesBackground::~vesBackground()
 }
 
 
+void vesBackground::setColor(const vesVector3f &color)
+{
+  this->setGradientColor(color, color);
+}
+
 void vesBackground::setColor(const vesVector4f &color)
 {
   this->setGradientColor(color, color);
 }
 
+void vesBackground::setGradientColor(const vesVector3f &topColor,
+                                     const vesVector3f &bottomColor)
+{
+  this->setGradientColor(vesVector4f(topColor[0], topColor[1], topColor[2], 1.f),
+                         vesVector4f(bottomColor[0], bottomColor[1], bottomColor[2], 1.f));
+}
 
 void vesBackground::setGradientColor(const vesVector4f &topColor,
                                      const vesVector4f &bottomColor)
 {
   this->m_topColor = topColor;
   this->m_bottomColor = bottomColor;
-
+  this->m_internal->m_image.reset();
   this->createBackground();
+}
+
+
+void vesBackground::setImage(const vesSharedPtr<vesImage> image)
+{
+  this->m_internal->m_image = image;
+  this->createBackground();
+}
+
+
+vesSharedPtr<vesImage> vesBackground::image() const
+{
+  return this->m_internal->m_image;
 }
 
 

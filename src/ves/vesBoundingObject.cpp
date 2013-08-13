@@ -22,12 +22,14 @@
 
 // C/C++ includes
 #include <limits>
+#include <algorithm>
 
-vesBoundingObject::vesBoundingObject() :
+vesBoundingObject::vesBoundingObject() : vesObject(),
   m_boundsDirty(true)
 {
   this->resetBounds();
 }
+
 
 vesBoundingObject::~vesBoundingObject()
 {
@@ -59,7 +61,7 @@ void vesBoundingObject::setBounds(vesVector3f min, vesVector3f max)
 
 float vesBoundingObject::boundsRadius()
 {
-  vesVector3f temp = this->m_boundsSize;
+  vesVector3f temp = this->m_boundsSize / 2.0;
 
   return sqrt(temp[0]*temp[0]+
               temp[1]*temp[1]+

@@ -25,12 +25,14 @@
 class vtkPolyData;
 class vtkDataSet;
 class vtkDiscretizableColorTransferFunction;
+class vtkImageData;
 class vtkLookupTable;
 class vtkUnsignedCharArray;
 class vtkDataArray;
 class vtkScalarsToColors;
 
 class vesGeometryData;
+class vesImage;
 class vesTexture;
 
 #include <vesSharedPtr.h>
@@ -41,6 +43,8 @@ class vesKiwiDataConversionTools
 {
 public:
   static vesSharedPtr<vesGeometryData> Convert(vtkPolyData* input);
+  template<typename T>
+  static vesSharedPtr<vesGeometryData> GenericConvert(vtkPolyData* input);
   static void Convert(vtkPolyData* input, vesSharedPtr<vesGeometryData> output);
 
   // This function is designed to be as fast as possible at the expense of
@@ -50,6 +54,9 @@ public:
   // Note: many of the optimizations here could be added to the Convert function
   //       this would be wortwhile future work.
   static void ConvertTriangles(vtkPolyData* input,
+    vesSharedPtr<vesGeometryData> output);
+  template<typename T>
+  static void GenericConvertTriangles(vtkPolyData* input,
     vesSharedPtr<vesGeometryData> output);
 
   /// Convert point and scalar data to VES format, it sacrifices generality for
@@ -62,6 +69,7 @@ public:
 
   static vtkSmartPointer<vtkDiscretizableColorTransferFunction> GetBlackBodyRadiationColorMap(double scalarRange[2]);
   static vtkSmartPointer<vtkLookupTable> GetRedToBlueLookupTable(double scalarRange[2]);
+  static vtkSmartPointer<vtkLookupTable> GetBlueToRedLookupTable(double scalarRange[2]);
   static vtkSmartPointer<vtkLookupTable> GetGrayscaleLookupTable(double scalarRange[2]);
   static void SetVertexColors(vtkUnsignedCharArray* colors,
     vesSharedPtr<vesGeometryData> triangleData);
@@ -71,9 +79,12 @@ public:
     vtkDataArray* tcoords, vesSharedPtr<vesGeometryData> triangleData);
 
   static vtkSmartPointer<vtkUnsignedCharArray> MapScalars(vtkDataArray* scalars, vtkScalarsToColors* scalarsToColors);
+
+  static vesSharedPtr<vesImage> ImageFromPixels(vtkUnsignedCharArray* pixels, int width, int height);
+  static vesSharedPtr<vesImage> ConvertImage(vtkImageData* imageData);
+
   static void SetTextureData(vtkUnsignedCharArray* pixels,
     vesSharedPtr<vesTexture> texture, int width, int height);
-
 };
 
 #endif

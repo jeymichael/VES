@@ -30,14 +30,14 @@
 #include <vtkNew.h>
 #include <vtkPlane.h>
 #include <vtkPlaneSource.h>
-#include <vtkArrowSource.h>
 #include <vtkPolyData.h>
-#include <vtkOutlineFilter.h>
 #include <vtkPointData.h>
 #include <vtkCellLocator.h>
 #include <vtkAppendPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkTransform.h>
+#include <vtkLineSource.h>
+#include <vtkSphereSource.h>
 
 #include <vector>
 #include <cassert>
@@ -52,32 +52,65 @@ public:
     this->WidgetVisibility = true;
     this->InteractionIsRotate = false;
     this->InteractionIsTranslate = false;
+    this->DefaultPlaneNormal = vesVector3d(1, 0, 0);
+
     this->WidgetTransform = vtkSmartPointer<vtkTransform>::New();
     this->WidgetTransform->PostMultiply();
 
-    // a hardcoded value to scale the plane for the brain atlas demo
-    double scale = 200;
-    this->WidgetTransform->Scale(scale, scale, scale);
-
     this->PlaneFunction = vtkSmartPointer<vtkPlane>::New();
     this->PlaneSource = vtkSmartPointer<vtkPlaneSource>::New();
-    this->ArrowSource = vtkSmartPointer<vtkArrowSource>::New();
-    this->ArrowSource->SetTipResolution(16);
-    this->ArrowSource->SetShaftResolution(16);
-    this->PlaneSource->SetNormal(1, 0, 0);
+    this->PlaneSource->SetNormal(this->DefaultPlaneNormal.data());
+
+    vtkNew<vtkLineSource> line;
+    line->SetPoint1(0,0,0);
+    line->SetPoint2(0.5,0,0);
+
+    this->SphereSource = vtkSmartPointer<vtkSphereSource>::New();
+    this->SphereSource->SetCenter(0.5,0,0);
+    this->SphereSource->SetRadius(0.03);
+    this->SphereSource->SetPhiResolution(16);
+    this->SphereSource->SetThetaResolution(16);
+
+    this->Handle = vtkSmartPointer<vtkAppendPolyData>::New();
+    this->Handle->AddInputConnection(line->GetOutputPort());
+    this->Handle->AddInputConnection(this->SphereSource->GetOutputPort());
   }
 
   ~vesInternal()
   {
   }
 
+  void updatePlaneFunction()
+  {
+    vesVector3d origin;
+    vesVector3d normal;
+    this->WidgetTransform->GetPosition(origin.data());
+    this->WidgetTransform->TransformNormal(this->DefaultPlaneNormal.data(), normal.data());
+    this->PlaneFunction->SetOrigin(origin.data());
+    this->PlaneFunction->SetNormal(normal.data());
+  }
+
+  void setupForBrainAtlas()
+  {
+    // this sets the scale/position/orientation of the widget
+    // so that it works well with the brain atlas demo
+    double scale = 200;
+    this->WidgetTransform->Scale(scale, scale, scale);
+    this->WidgetTransform->RotateZ(-90);
+    this->WidgetTransform->RotateX(-60);
+    this->WidgetTransform->Translate(0,-50,30);
+  }
+
   bool InteractionIsRotate;
   bool InteractionIsTranslate;
   bool WidgetVisibility;
 
+  vesVector3d DefaultPlaneNormal;
+
   vtkSmartPointer<vtkPlane> PlaneFunction;
   vtkSmartPointer<vtkPlaneSource> PlaneSource;
-  vtkSmartPointer<vtkArrowSource> ArrowSource;
+  vtkSmartPointer<vtkAppendPolyData> Handle;
+  vtkSmartPointer<vtkSphereSource> SphereSource;
   vtkSmartPointer<vtkTransform> WidgetTransform;
   vtkSmartPointer<vtkAppendPolyData> AppendFilter;
 
@@ -92,6 +125,8 @@ public:
 vesKiwiPlaneWidget::vesKiwiPlaneWidget()
 {
   this->Internal = new vesInternal();
+  this->Internal->setupForBrainAtlas();
+  this->Internal->updatePlaneFunction();
 }
 
 //----------------------------------------------------------------------------
@@ -107,7 +142,7 @@ void vesKiwiPlaneWidget::initializeWithShader(vesSharedPtr<vesShaderProgram> geo
   this->Internal->ClipUniform = clipUniform;
 
   this->Internal->PlaneSource->Update();
-  this->Internal->ArrowSource->Update();
+  this->Internal->Handle->Update();
 
   this->Internal->PlaneRep = vesKiwiPolyDataRepresentation::Ptr(new vesKiwiPolyDataRepresentation());
   this->Internal->PlaneRep->initializeWithShader(geometryShader);
@@ -118,7 +153,10 @@ void vesKiwiPlaneWidget::initializeWithShader(vesSharedPtr<vesShaderProgram> geo
   this->Internal->NormalRep = vesKiwiPolyDataRepresentation::Ptr(new vesKiwiPolyDataRepresentation());
   this->Internal->NormalRep->initializeWithShader(geometryShader);
   this->Internal->NormalRep->setBinNumber(1);
-  this->Internal->NormalRep->setPolyData(this->Internal->ArrowSource->GetOutput());
+  this->Internal->NormalRep->setPolyData(this->Internal->Handle->GetOutput());
+
+  // make the handle bigger so that it is easier to pick
+  this->setHandleSize(0.3);
 
   this->Internal->AllReps.push_back(this->Internal->PlaneRep);
   this->Internal->AllReps.push_back(this->Internal->NormalRep);
@@ -128,23 +166,50 @@ void vesKiwiPlaneWidget::initializeWithShader(vesSharedPtr<vesShaderProgram> geo
 }
 
 //----------------------------------------------------------------------------
+vtkPlane* vesKiwiPlaneWidget::plane() const
+{
+  return this->Internal->PlaneFunction;
+}
+
+//----------------------------------------------------------------------------
 void vesKiwiPlaneWidget::planeEquation(double equation[4])
 {
-  vesVector3f normal(1, 0, 0);
-  this->Internal->WidgetTransform->TransformNormal(normal.data(), normal.data());
-
-  vesVector3f worldToPlaneOrigin;
-  this->Internal->WidgetTransform->GetPosition(worldToPlaneOrigin.data());
+  vesVector3d origin;
+  vesVector3d normal;
+  this->Internal->WidgetTransform->GetPosition(origin.data());
+  this->Internal->WidgetTransform->TransformNormal(this->Internal->DefaultPlaneNormal.data(), normal.data());
 
   equation[0] = -normal[0];
   equation[1] = -normal[1];
   equation[2] = -normal[2];
-  equation[3] = normal.dot(worldToPlaneOrigin);
+  equation[3] = normal.dot(origin);
+}
+
+//----------------------------------------------------------------------------
+vtkTransform* vesKiwiPlaneWidget::widgetTransform()
+{
+  return this->Internal->WidgetTransform;
+}
+
+//----------------------------------------------------------------------------
+void vesKiwiPlaneWidget::onTransformModified()
+{
+  this->setTransformOnActor(this->Internal->PlaneRep->actor(), this->Internal->WidgetTransform);
+  this->setTransformOnActor(this->Internal->NormalRep->actor(), this->Internal->WidgetTransform);
+  this->Internal->updatePlaneFunction();
+}
+
+//----------------------------------------------------------------------------
+void vesKiwiPlaneWidget::setHandleSize(double size)
+{
+  this->Internal->SphereSource->SetRadius(size);
+  this->Internal->Handle->Update();
 }
 
 //----------------------------------------------------------------------------
 void vesKiwiPlaneWidget::willRender(vesSharedPtr<vesRenderer> renderer)
 {
+  vesNotUsed(renderer);
   assert(this->Internal->ClipUniform);
   double planeEquation[4];
   this->planeEquation(planeEquation);
@@ -158,7 +223,6 @@ bool vesKiwiPlaneWidget::handleSingleTouchPanGesture(double deltaX, double delta
     return false;
   }
 
-
   deltaY *= -1;
 
   vesSharedPtr<vesRenderer> ren = this->renderer();
@@ -166,7 +230,6 @@ bool vesKiwiPlaneWidget::handleSingleTouchPanGesture(double deltaX, double delta
   int width = ren->width();
   int height = ren->height();
   vesVector3f viewFocus = camera->focalPoint();
-  vesVector3f viewPoint = camera->position();
   vesVector3f viewPlaneNormal = camera->viewPlaneNormal();
   vesVector3f viewFocusDisplay = ren->computeWorldToDisplay(viewFocus);
   float focalDepth = viewFocusDisplay[2];
@@ -209,8 +272,7 @@ bool vesKiwiPlaneWidget::handleSingleTouchPanGesture(double deltaX, double delta
                                                centerOfRotation[2]);
   }
 
-  this->setTransformOnActor(this->Internal->PlaneRep->actor(), this->Internal->WidgetTransform);
-  this->setTransformOnActor(this->Internal->NormalRep->actor(), this->Internal->WidgetTransform);
+  this->onTransformModified();
 
   return true;
 }
@@ -232,7 +294,7 @@ bool PickDataSet(vtkDataSet* dataSet, const vesVector3f& rayPoint0, const vesVec
   vtkIdType cellId = -1;
   int subId;
 
-  int result = locator->IntersectWithLine(p0, p1, 0.0, t, pickPoint, paramCoords, subId, cellId);
+  int result = locator->IntersectWithLine(p0, p1, 0, t, pickPoint, paramCoords, subId, cellId);
   return (result == 1);
 }
 
@@ -257,7 +319,7 @@ bool vesKiwiPlaneWidget::handleSingleTouchDown(int displayX, int displayY)
   this->Internal->WidgetTransform->GetLinearInverse()->TransformPoint(rayPoint0.data(), rayPoint0.data());
   this->Internal->WidgetTransform->GetLinearInverse()->TransformPoint(rayPoint1.data(), rayPoint1.data());
 
-  if (PickDataSet(this->Internal->ArrowSource->GetOutput(), rayPoint0, rayPoint1)) {
+  if (PickDataSet(this->Internal->Handle->GetOutput(), rayPoint0, rayPoint1)) {
     this->Internal->InteractionIsRotate = true;
     this->Internal->InteractionIsTranslate = false;
     this->Internal->NormalRep->setColor(0.0, 1.0, 0.0, 1.0);
@@ -284,7 +346,7 @@ bool vesKiwiPlaneWidget::handleSingleTouchTap(int displayX, int displayY)
   vesSharedPtr<vesRenderer> ren = this->renderer();
   displayY = ren->height() - displayY;
 
-  int cornerSize = 50;
+  int cornerSize = 80;
   if (displayX < cornerSize && (ren->height() - displayY) < cornerSize) {
 
     this->Internal->WidgetVisibility = !this->Internal->WidgetVisibility;
@@ -333,31 +395,4 @@ void vesKiwiPlaneWidget::removeSelfFromRenderer(vesSharedPtr<vesRenderer> render
   for (size_t i = 0; i < this->Internal->AllReps.size(); ++i) {
     this->Internal->AllReps[i]->removeSelfFromRenderer(renderer);
   }
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiPlaneWidget::numberOfFacets()
-{
-  int count = 0;
-  for (size_t i = 0; i < this->Internal->AllReps.size(); ++i)
-    count += this->Internal->AllReps[i]->numberOfFacets();
-  return count;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiPlaneWidget::numberOfVertices()
-{
-  int count = 0;
-  for (size_t i = 0; i < this->Internal->AllReps.size(); ++i)
-    count += this->Internal->AllReps[i]->numberOfVertices();
-  return count;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiPlaneWidget::numberOfLines()
-{
-  int count = 0;
-  for (size_t i = 0; i < this->Internal->AllReps.size(); ++i)
-    count += this->Internal->AllReps[i]->numberOfLines();
-  return count;
 }

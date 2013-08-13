@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -57,6 +58,7 @@ public:
 
   // \todo: Implement these useful functions.
   // int compare(const vesShader &rhs);
+
   inline unsigned int shaderHandle() { return this->m_shaderHandle; }
 
   bool setShaderType(ShaderType type);

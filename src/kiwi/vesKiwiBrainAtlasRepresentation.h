@@ -25,6 +25,7 @@
 #include "vesKiwiWidgetRepresentation.h"
 
 class vesShaderProgram;
+class vtkPlane;
 
 class vesKiwiBrainAtlasRepresentation : public vesKiwiWidgetRepresentation
 {
@@ -40,15 +41,23 @@ public:
 
   void loadData(const std::string& filename);
 
+  void setClipPlane(vtkPlane* plane);
+
   virtual void addSelfToRenderer(vesSharedPtr<vesRenderer> renderer);
   virtual void removeSelfFromRenderer(vesSharedPtr<vesRenderer> renderer);
   virtual void willRender(vesSharedPtr<vesRenderer> renderer);
 
-  virtual int numberOfFacets();
-  virtual int numberOfVertices();
-  virtual int numberOfLines();
+  virtual void showTextLabel(int modelIndex);
+  virtual void hideTextLabel();
+  virtual int findTappedModel(int displayX, int displayY);
+  virtual bool hideModel(int displayX, int displayY);
+  virtual bool selectModel(int displayX, int displayY);
+  virtual void deselectModel();
+  virtual bool toggleSkinOpacity(int displayX, int displayY);
 
   virtual bool handleSingleTouchTap(int displayX, int displayY);
+  virtual bool handleDoubleTap(int displayX, int displayY);
+  virtual bool handleLongPress(int displayX, int displayY);
 
 protected:
 

@@ -39,7 +39,7 @@ To run Eclipse, cd into the unzipped folder and run ./eclipse.
 
 --Download Android SDK and ADT plugin for Eclipse
 
-I downloaded android-sdk_r12-mac_x86.zip from http://developer.android.com/sdk/index.html
+I downloaded android-sdk_r20.0.3-macosx.zip from http://developer.android.com/sdk/index.html
 
 Next, I launched Eclipse, installed the ADT plugin, and downloaded additional
 Android SDK components.  You should follow the instructions here:
@@ -58,7 +58,12 @@ by executing the command line:
 
 --Download the NDK
 
-I downloaded android-ndk-r6-darwin-x86.tar.bz2 from http://developer.android.com/sdk/ndk/index.html
+The NDK can be downloaded from http://developer.android.com/sdk/ndk/index.html
+
+Currently, ndk-r8b is the supported version.  It can be downloaded from:
+
+osx:   http://dl.google.com/android/ndk/android-ndk-r8b-darwin-x86.tar.bz2
+linux: http://dl.google.com/android/ndk/android-ndk-r8b-linux-x86.tar.bz2
 
 
 --Compiling code with toolchains and ant
@@ -80,7 +85,7 @@ The main tools used will be 'android' and 'adb'.  These can be found in the Andr
 
 Execute the following commands:
 
-export ANDROID_NDK=/path/to/android-ndk-r6
+export ANDROID_NDK=/path/to/android-ndk-r8b
 
 cd Apps/Android/CMakeBuild
 cmake -P configure.cmake
@@ -93,7 +98,7 @@ make -j4
 
 Execute the following commands:
 
-export ANDROID_NDK=/path/to/android-ndk-r6
+export ANDROID_NDK=/path/to/android-ndk-r8b
 
 cd Apps/Android/Kiwi
 ./configure_cmake.sh

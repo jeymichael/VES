@@ -20,12 +20,35 @@
 #ifndef VESGL_H
 #define VESGL_H
 
-#ifdef ANDROID
-# include <GLES2/gl2.h>
-# include <GLES2/gl2ext.h>
+#ifdef VES_USE_DESKTOP_GL
+  // Setup for desktop GL
+  #ifdef __APPLE__
+    #include <OpenGL/gl.h>
+    #include <OpenGL/glext.h>
+  #else
+    #define GL_GLEXT_PROTOTYPES
+    #ifdef _WIN32
+       #define NOMINMAX
+       #include <windows.h>
+       #include <GL/glew.h>
+       #include <GL/gl.h>
+    #else
+       #include <GL/gl.h>
+       #include <GL/glext.h>
+    #endif
+  #endif
+  #ifndef glClearDepthf
+    #define glClearDepthf glClearDepth
+  #endif
 #else
-# include <OpenGLES/ES2/gl.h>
-# include <OpenGLES/ES2/glext.h>
+  // Setup for OpenGL ES
+  #ifdef __APPLE__
+    #include <OpenGLES/ES2/gl.h>
+    #include <OpenGLES/ES2/glext.h>
+  #else
+    #include <GLES2/gl2.h>
+    #include <GLES2/gl2ext.h>
+  #endif
 #endif
 
 #ifndef GL_SAMPLER_1D

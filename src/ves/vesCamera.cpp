@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -237,10 +238,10 @@ void vesCamera::setWindowCenter(double x, double y)
 }
 
 
-void vesCamera::setClippingRange(float near, float far)
+void vesCamera::setClippingRange(float znear, float zfar)
 {
-  this->m_clippingRange[0] = near;
-  this->m_clippingRange[1] = far;
+  this->m_clippingRange[0] = znear;
+  this->m_clippingRange[1] = zfar;
 }
 
 

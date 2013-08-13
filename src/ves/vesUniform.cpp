@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -511,6 +512,9 @@ bool vesUniform::getElement(unsigned int index, vesMatrix4x4f &value) const
 
 void vesUniform::callGL(int location) const
 {
+  if (location < 0)
+    return;
+
   if (this->m_numberElements < 1)
     return;
 

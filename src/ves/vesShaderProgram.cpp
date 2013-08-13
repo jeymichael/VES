@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -61,6 +62,7 @@ public:
   std::vector< vesSharedPtr<vesShader> > m_shaders;
   std::vector< vesSharedPtr<vesUniform> > m_uniforms;
   std::map<int, vesSharedPtr<vesVertexAttribute> >  m_vertexAttributes;
+  std::map<int, bool> m_enabledVertexAttributes;
 
   UniformNameToLocation m_uniformNameToLocation;
   VertexAttributeNameToLocation m_vertexAttributeNameToLocation;
@@ -78,9 +80,16 @@ vesShaderProgram::vesShaderProgram() : vesMaterialAttribute()
 
   vesSharedPtr<vesEngineUniform> vertexHasColors (new vesHasVertexColors());
   vesSharedPtr<vesEngineUniform> primitiveType (new vesPrimitiveType());
+  vesSharedPtr<vesEngineUniform> windowSize (new vesWindowSizeEngineUniform());
+  vesSharedPtr<vesEngineUniform> pointSize (new vesPointSizeEngineUniform());
+  vesSharedPtr<vesEngineUniform> lineWidth (new vesLineWidthEngineUniform());
 
   this->m_internal->m_engineUniforms.push_back(vertexHasColors);
   this->m_internal->m_engineUniforms.push_back(primitiveType);
+  this->m_internal->m_engineUniforms.push_back(windowSize);
+  this->m_internal->m_engineUniforms.push_back(pointSize);
+  this->m_internal->m_engineUniforms.push_back(lineWidth);
+  this->addUniform(vesVertexOpacityUniform::Ptr(new vesVertexOpacityUniform));
 
   for (size_t i=0; i < this->m_internal->m_engineUniforms.size(); ++i) {
     this->addUniform(this->m_internal->m_engineUniforms[i]->uniform());
@@ -155,10 +164,45 @@ bool vesShaderProgram::addVertexAttribute(
   }
 
   this->m_internal->m_vertexAttributes[key] = attribute;
+  this->m_internal->m_enabledVertexAttributes[key] = true;
 
   this->setDirtyStateOn();
 
   return true;
+}
+
+
+vesSharedPtr<vesVertexAttribute> vesShaderProgram::attribute(int key)
+{
+  if (this->m_internal->m_vertexAttributes.find(key)
+      != this->m_internal->m_vertexAttributes.end()) {
+    return this->m_internal->m_vertexAttributes[key];
+  }
+
+  return vesSharedPtr<vesVertexAttribute>();
+}
+
+
+bool vesShaderProgram::enableVertexAttribute(int key, bool value)
+{
+  if(this->m_internal->m_vertexAttributes.find(key)
+     != this->m_internal->m_vertexAttributes.end()) {
+    this->m_internal->m_enabledVertexAttributes[key] = value;
+    return true;
+  }
+
+  return false;
+}
+
+
+bool vesShaderProgram::isEnabledVertexAttribute(int key) const
+{
+  if(this->m_internal->m_enabledVertexAttributes.find(key)
+     != this->m_internal->m_enabledVertexAttributes.end()) {
+    return this->m_internal->m_enabledVertexAttributes[key];
+  }
+
+  return false;
 }
 
 
@@ -285,6 +329,7 @@ void vesShaderProgram::bindAttributes()
   }
 }
 
+
 void vesShaderProgram::bindUniforms()
 {
   std::vector< vesSharedPtr<vesUniform> >::const_iterator constItr =
@@ -313,7 +358,9 @@ void vesShaderProgram::deleteVertexAndFragment()
   std::vector< vesSharedPtr<vesShader> >::iterator itr
     = this->m_internal->m_shaders.begin();
   for (; itr != this->m_internal->m_shaders.end(); ++itr) {
-    glDeleteShader((*itr)->shaderHandle());
+    if ((*itr)->shaderHandle()) {
+      glDeleteShader((*itr)->shaderHandle());
+    }
   }
 }
 
@@ -328,7 +375,6 @@ const unsigned int& vesShaderProgram::programHandle() const
 {
   return this->m_internal->m_programHandle;
 }
-
 
 
 vesSharedPtr<vesUniform> vesShaderProgram::uniform(const std::string &name)
@@ -396,7 +442,7 @@ void vesShaderProgram::bind(const vesRenderState &renderState)
     std::vector< vesSharedPtr<vesShader> >::iterator itr
       = this->m_internal->m_shaders.begin();
     for (; itr != this->m_internal->m_shaders.end(); ++itr) {
-      std::cerr << "INFO: Compiling shaders: " << std::endl;
+      //std::cerr << "INFO: Compiling shaders: " << std::endl;
 
       (*itr)->compileShader();
 
@@ -435,7 +481,6 @@ void vesShaderProgram::bind(const vesRenderState &renderState)
 }
 
 
-
 void vesShaderProgram::unbind(const vesRenderState &renderState)
 {
   // \todo: Implement this.
@@ -460,7 +505,9 @@ void vesShaderProgram::bindVertexData(const vesRenderState &renderState, int key
     this->m_internal->m_vertexAttributes.find(key);
 
   if (constItr != this->m_internal->m_vertexAttributes.end()) {
-    this->m_internal->m_vertexAttributes[key]->bindVertexData(renderState, key);
+    if (this->isEnabledVertexAttribute(key)) {
+      this->m_internal->m_vertexAttributes[key]->bindVertexData(renderState, key);
+    }
   }
 }
 

@@ -23,6 +23,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkXMLImageDataReader.h>
+#include <vtkXMLUnstructuredGridReader.h>
 #include <vtkPNGReader.h>
 #include <vtkJPEGReader.h>
 #include <vtkPolyDataReader.h>
@@ -30,16 +31,22 @@
 #include <vtkSTLReader.h>
 #include <vtkErrorCode.h>
 #include <vtkNew.h>
+#include <vtkDataSetReader.h>
 #include <vtkPolyData.h>
+#include <vtkImageData.h>
 #include <vtkBYUReader.h>
 #include <vtkPLYReader.h>
 #include <vtkSphereSource.h>
 #include <vtkPDBReader.h>
 #include <vtkGlyph3D.h>
 #include <vtkAppendPolyData.h>
+#include <vtkDataSetSurfaceFilter.h>
 #include <vtkMetaImageReader.h>
 
+#include <vtksys/SystemTools.hxx>
+
 #include <cassert>
+#include <limits>
 
 //----------------------------------------------------------------------------
 class vesKiwiDataLoader::vesInternal
@@ -48,11 +55,12 @@ public:
 
   vesInternal()
   {
+    this->IsErrorOnMoreThan65kVertices = true;
   }
 
+  bool IsErrorOnMoreThan65kVertices;
   std::string ErrorTitle;
   std::string ErrorMessage;
-
 };
 
 //----------------------------------------------------------------------------
@@ -68,14 +76,33 @@ vesKiwiDataLoader::~vesKiwiDataLoader()
 }
 
 //----------------------------------------------------------------------------
-bool vesKiwiDataLoader::hasEnding(const std::string& fullString, const std::string& ending) const
+void vesKiwiDataLoader::setErrorOnMoreThan65kVertices(bool isEnabled)
 {
-  if (fullString.length() > ending.length()) {
-    return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
-  }
-  else {
+  this->Internal->IsErrorOnMoreThan65kVertices = isEnabled;
+}
+
+//----------------------------------------------------------------------------
+bool vesKiwiDataLoader::isErrorOnMoreThan65kVertices() const
+{
+  return this->Internal->IsErrorOnMoreThan65kVertices;
+}
+
+//----------------------------------------------------------------------------
+bool vesKiwiDataLoader::hasEnding(const std::string& fullString, const std::string& ending)
+{
+  size_t sz = ending.length();
+  if (fullString.length() <= sz) {
     return false;
   }
+
+  std::string subStr = fullString.substr(fullString.length() - sz, sz);
+  for (size_t i = 0; i < sz; ++i) {
+    if (tolower(subStr[i]) != tolower(ending[i])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 //----------------------------------------------------------------------------
@@ -111,15 +138,33 @@ vtkSmartPointer<vtkDataSet> vesKiwiDataLoader::datasetFromAlgorithm(vtkAlgorithm
   vtkDataSet* dataset = vtkDataSet::SafeDownCast(algorithm->GetOutputDataObject(0));
   assert(dataset);
 
-  // VES cannot handle too many points (if the dataset has non-vertex cells),
-  // so handle the error at this point
+  // If the dataset is not vtkPolyData or vtkImageData
+  // then use the surface filter to convert it to vtkPolyData
+  if (!vtkPolyData::SafeDownCast(dataset) && !vtkImageData::SafeDownCast(dataset)) {
+    vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+    surfaceFilter->SetInputConnection(algorithm->GetOutputPort());
+    return datasetFromAlgorithm(surfaceFilter);
+  }
+
   const vtkIdType maximumNumberOfPoints = 65536;
+
+  // If we have a polydata with elements other than vertices, and it has
+  // more than 65K points, then we require the opengl extension to support
+  // unsigned int element indices, otherwise we throw an error at this point.
   vtkPolyData* polyData = vtkPolyData::SafeDownCast(dataset);
   if (polyData
-      && polyData->GetNumberOfPoints() > maximumNumberOfPoints
-      && (polyData->GetNumberOfPolys() || polyData->GetNumberOfLines() || polyData->GetNumberOfStrips()))
+      && (polyData->GetNumberOfPoints() > maximumNumberOfPoints)
+      && (polyData->GetNumberOfPolys() || polyData->GetNumberOfLines() || polyData->GetNumberOfStrips())
+      && this->isErrorOnMoreThan65kVertices())
     {
     this->setMaximumNumberOfPointsErrorMessage();
+    return 0;
+    }
+
+  if (!dataset->GetNumberOfPoints())
+    {
+    this->Internal->ErrorTitle = "Empty Data";
+    this->Internal->ErrorMessage = "Failed to load any data from file.";
     return 0;
     }
 
@@ -132,9 +177,16 @@ vtkSmartPointer<vtkDataSet> vesKiwiDataLoader::loadDataset(const std::string& fi
   this->Internal->ErrorTitle = std::string();
   this->Internal->ErrorMessage = std::string();
 
+  if (!vtksys::SystemTools::FileExists(filename.c_str(), true))
+    {
+    this->Internal->ErrorTitle = "File Not Found";
+    this->Internal->ErrorMessage = "The file does not exist: " + filename;
+    return 0;
+    }
+
   if (this->hasEnding(filename, "vtk"))
     {
-    vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
+    vtkSmartPointer<vtkDataSetReader> reader = vtkSmartPointer<vtkDataSetReader>::New();
     reader->SetFileName(filename.c_str());
     return this->datasetFromAlgorithm(reader);
     }
@@ -174,10 +226,11 @@ vtkSmartPointer<vtkDataSet> vesKiwiDataLoader::loadDataset(const std::string& fi
     sphere->SetRadius(1.0);
     sphere->SetThetaResolution(8);
     sphere->SetPhiResolution(8);
+    sphere->Update();
 
     vtkNew<vtkGlyph3D> glyph;
     glyph->SetInputConnection(reader->GetOutputPort());
-    glyph->SetSource(sphere->GetOutput());
+    glyph->SetSourceData(sphere->GetOutput());
     glyph->SetOrient(1);
     glyph->SetScaleMode(2);
     glyph->SetScaleFactor(0.25);
@@ -198,6 +251,12 @@ vtkSmartPointer<vtkDataSet> vesKiwiDataLoader::loadDataset(const std::string& fi
   else if (this->hasEnding(filename, "vti"))
     {
     vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
+    reader->SetFileName(filename.c_str());
+    return datasetFromAlgorithm(reader);
+    }
+  else if (this->hasEnding(filename, "vtu"))
+    {
+    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
     reader->SetFileName(filename.c_str());
     return datasetFromAlgorithm(reader);
     }

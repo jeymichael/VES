@@ -19,6 +19,7 @@
  ========================================================================*/
 /// \class vesBackground
 /// \ingroup ves
+/// \brief Special camera node to render background scene
 /// \see vesCamera
 
 #ifndef VESBACKGROUND_H
@@ -32,6 +33,7 @@
 // Forward declarations.
 class vesActor;
 class vesDepth;
+class vesImage;
 class vesMapper;
 
 class vesBackground : public vesCamera
@@ -43,11 +45,20 @@ public:
   virtual ~vesBackground();
 
   /// Set single color for the background.
+  virtual void setColor(const vesVector3f &color);
   virtual void setColor(const vesVector4f &color);
 
   /// Set two colors for the gradient background.
+  virtual void setGradientColor(const vesVector3f &topColor,
+                                const vesVector3f &bottomColor);
   virtual void setGradientColor(const vesVector4f &topColor,
                                 const vesVector4f &bottomColor);
+
+  /// Set image for the background
+  virtual void setImage(const vesSharedPtr<vesImage> image);
+
+  /// Get image for the background
+  vesSharedPtr<vesImage> image() const;
 
   /// \copydoc vesCamera::modelViewMatrix()
   virtual vesMatrix4x4f modelViewMatrix();

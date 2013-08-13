@@ -29,22 +29,34 @@
 
 #include <vesMath.h>
 #include <vesSharedPtr.h>
+#include <vesSetGet.h>
 
 #include <string>
 
 class vesCamera;
+class vesOpenGLSupport;
 class vesRenderer;
 class vesShader;
 class vesShaderProgram;
 class vesUniform;
 class vesVertexAttribute;
+class vesKiwiCameraInteractor;
 
 class vesKiwiBaseApp
 {
 public:
 
+  vesTypeMacro(vesKiwiBaseApp);
+
   vesKiwiBaseApp();
   virtual ~vesKiwiBaseApp();
+
+  /// This method makes OpenGL calls to perform initializations that must
+  /// occur while there is a valid GL context.  This method initilizes the
+  /// instance of vesOpenGLSupport returned glSupport().  Preferably, this
+  /// method should be called right after performing the platform specific
+  /// initialization of the GL context.
+  virtual void initGL();
 
   /// Call vesRenderer::render() on the vesRenderer owned by this app object.
   /// willRender() is called at the start of this method, and didRender() is called
@@ -59,6 +71,13 @@ public:
   /// dollied away from the focal point so that all objects are visible in the view.
   /// \see vesCamera::resetCamera()
   virtual void resetView();
+
+  /// Reset the camera to a default position using the given view direction
+  /// and view up vector. The camera focal point is set to the center of
+  /// the bounds of all visible objects in the renderer and the camera is
+  /// dollied away from the focal point so that all objects are visible in the view.
+  /// \see vesCamera::resetCamera()
+  virtual void resetView(const vesVector3f& viewDirection, const vesVector3f& viewUp);
 
   /// Resizes the renderer to the given width and height.
   virtual void resizeView(int width, int height);
@@ -90,8 +109,14 @@ public:
   /// Handle a single touch up event.  The default implementation is a no-op.
   virtual void handleSingleTouchUp();
 
+  /// Handle a single touch tap event.  The default implementation is a no-op.
+  virtual void handleSingleTouchTap(int displayX, int displayY);
+
   /// Handle a double tap event.  The default implementation is a no-op.
-  virtual void handleDoubleTap();
+  virtual void handleDoubleTap(int displayX, int displayY);
+
+  /// Handle a long press event.  The default implementation is a no-op.
+  virtual void handleLongPress(int displayX, int displayY);
 
   /// Set the background color of the renderer.
   void setBackgroundColor(double r, double g, double b);
@@ -121,6 +146,15 @@ public:
 
   /// Set the camera view up direction.
   void setCameraViewUp(const vesVector3f& viewUp);
+
+  /// Return a vesOpenGLSupport instance.  This instance is initialized
+  /// during the call to initGL() and it is an error to call this method
+  /// before initGL().
+  vesSharedPtr<vesOpenGLSupport> glSupport();
+
+  /// Return the camera interactor used by the app instance for handling
+  /// touch gestures.
+  vesSharedPtr<vesKiwiCameraInteractor> cameraInteractor() const;
 
 protected:
 

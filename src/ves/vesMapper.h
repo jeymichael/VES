@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -64,12 +65,23 @@ public:
   vesSharedPtr<vesGeometryData> geometryData();
   const vesSharedPtr<vesGeometryData> geometryData() const;
 
-  /// Set single geometry color. Default is (0.9, 0.9, 0.9, 1.0).
+  /// Set single geometry color. Default is (1.0, 1.0, 1.0, 1.0).
   void setColor(float r, float g, float b, float a);
 
-  /// Get single geometry color. Default is (0.9, 0.9, 0.9, 1.0).
+  /// Get single geometry color. Default is (1.0, 1.0, 1.0, 1.0).
   float* color();
   const float* color() const;
+
+  int pointSize() const;
+  void setPointSize(int size);
+
+  int lineWidth() const;
+  void setLineWidth(int width);
+
+  /// Enable / Disable wireframe rendering
+  void enableWireframe(bool value);
+  /// Check whether or not wireframe rendering is enabled
+  bool isEnabledWireframe() const;
 
   /// Render the geometry
   virtual void render(const vesRenderState &renderState);
@@ -80,10 +92,6 @@ private:
   virtual void createVertexBufferObjects();
   virtual void deleteVertexBufferObjects();
 
-  //\todo: Why do we need this?
-  void normalize();
-  vesMatrix4x4f m_normalizedMatrix;
-
 protected:
   void drawPrimitive(const vesRenderState &renderState,
                      vesSharedPtr<vesPrimitive> primitive);
@@ -93,6 +101,10 @@ protected:
                   vesSharedPtr<vesPrimitive> points);
 
   bool m_initialized;
+  bool m_enableWireframe;
+
+  int m_pointSize;
+  int m_lineWidth;
 
   const int m_maximumTriangleIndicesPerDraw;
 

@@ -67,7 +67,7 @@ void ConvertVertexArrays(vtkDataSet* dataSet, vesSharedPtr<vesGeometryData> geom
 
 vesSharedPtr<vesGeometryData> GeometryDataFromPolyData(vtkPolyData* polyData)
 {
-  if (!polyData->GetNumberOfPolys() && !polyData->GetNumberOfLines())
+  if (!polyData->GetNumberOfStrips() && !polyData->GetNumberOfPolys() && !polyData->GetNumberOfLines())
     {
     return vesKiwiDataConversionTools::ConvertPoints(polyData);
     }
@@ -78,8 +78,9 @@ vesSharedPtr<vesGeometryData> GeometryDataFromPolyData(vtkPolyData* polyData)
   vtkNew<vtkTriangleFilter> triangleFilter;
   triangleFilter->PassLinesOn();
   triangleFilter->PassVertsOn();
-  triangleFilter->SetInput(polyData);
+  triangleFilter->SetInputData(polyData);
   triangleFilter->Update();
+
   return vesKiwiDataConversionTools::Convert(triangleFilter->GetOutput());
 }
 
@@ -193,8 +194,6 @@ void vesKiwiPolyDataRepresentation::initializeWithShader(
   this->Internal->Actor->material()->addAttribute(shaderProgram);
   this->Internal->Actor->material()->addAttribute(this->Internal->Blend);
   this->Internal->Actor->material()->addAttribute(this->Internal->Depth);
-
-  this->Internal->Actor->mapper()->setColor(0.9, 0.9, 0.9, 1.0);
 }
 
 //----------------------------------------------------------------------------
@@ -258,25 +257,4 @@ vesSharedPtr<vesActor> vesKiwiPolyDataRepresentation::actor() const
 vesSharedPtr<vesMapper> vesKiwiPolyDataRepresentation::mapper() const
 {
   return this->Internal->Mapper;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiPolyDataRepresentation::numberOfFacets()
-{
-  vesPrimitive::Ptr tris = this->geometryData()->triangles();
-  return tris ? static_cast<int>(tris->size()) : 0;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiPolyDataRepresentation::numberOfVertices()
-{
-  vesSourceData::Ptr points = this->geometryData()->sourceData(vesVertexAttributeKeys::Position);
-  return points ? static_cast<int>(points->sizeOfArray()) : 0;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiPolyDataRepresentation::numberOfLines()
-{
-  vesPrimitive::Ptr lines = this->geometryData()->lines();
-  return lines ? static_cast<int>(lines->size()) : 0;
 }

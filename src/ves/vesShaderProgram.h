@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,6 +20,7 @@
  ========================================================================*/
 /// \class vesShaderProgram
 /// \ingroup ves
+/// \brief ShaderProgram class provides interface to create program object
 /// \see vesMaterialAttribute vesMaterial
 
 #ifndef VESSHADER_PROGRAM_H
@@ -48,7 +50,11 @@ public:
 
   bool addShader(vesSharedPtr<vesShader> shader);
   bool addUniform(vesSharedPtr<vesUniform> uniform);
+
   bool addVertexAttribute(vesSharedPtr<vesVertexAttribute> attribute, int key);
+  vesSharedPtr<vesVertexAttribute> attribute(int key);
+  bool enableVertexAttribute(int key, bool value);
+  bool isEnabledVertexAttribute(int key) const;
 
   bool addBindAttributeLocation(const std::string &name, int location);
 

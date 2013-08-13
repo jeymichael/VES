@@ -58,6 +58,8 @@ public:
 
     this->ContourRep = 0;
     this->OutlineRep = 0;
+    this->UseContour = false;
+    this->InteractionEnabled = true;
   }
 
   ~vesInternal()
@@ -71,6 +73,8 @@ public:
   int SelectedImageDimension;
   int CurrentSliceIndices[3];
   int ContourVis;
+  bool UseContour;
+  bool InteractionEnabled;
   double ImageScalarRange[2];
 
   std::vector<vesKiwiDataRepresentation*> AllReps;
@@ -101,6 +105,8 @@ vesKiwiImageWidgetRepresentation::~vesKiwiImageWidgetRepresentation()
 //----------------------------------------------------------------------------
 void vesKiwiImageWidgetRepresentation::willRender(vesSharedPtr<vesRenderer> renderer)
 {
+  vesNotUsed(renderer);
+
   if (this->Internal->TargetSliceIndex.size()) {
 
     std::map<int, int>::const_iterator itr;
@@ -129,20 +135,20 @@ void vesKiwiImageWidgetRepresentation::setImageData(vtkImageData* image)
   this->Internal->CurrentSliceIndices[2] = dimensions[2]/2;
 
   this->Internal->SliceFilter = vtkSmartPointer<vtkExtractVOI>::New();
-  this->Internal->SliceFilter->SetInput(image);
+  this->Internal->SliceFilter->SetInputData(image);
 
   for (int i = 0; i < 3; ++i)
     this->setSliceIndex(i, this->Internal->CurrentSliceIndices[i]);
 
   vtkNew<vtkOutlineFilter> outline;
-  outline->SetInput(image);
+  outline->SetInputData(image);
   outline->Update();
   this->Internal->OutlineRep->setPolyData(outline->GetOutput());
   this->Internal->OutlineRep->setColor(0.5, 0.5, 0.5, 0.5);
 
   if (image->GetNumberOfPoints() < 600000) {
     vtkNew<vtkContourFilter> contour;
-    contour->SetInput(image);
+    contour->SetInputData(image);
     // contour value hardcoded for head image dataset
     contour->SetValue(0, 1400);
     contour->ComputeScalarsOff();
@@ -153,6 +159,7 @@ void vesKiwiImageWidgetRepresentation::setImageData(vtkImageData* image)
     this->Internal->ContourRep->setColor(0.8, 0.8, 0.8, 0.4);
     this->Internal->ContourVis = 1;
     this->Internal->AllReps.push_back(this->Internal->ContourRep);
+    this->Internal->UseContour = true;
   }
 }
 
@@ -178,7 +185,7 @@ void vesKiwiImageWidgetRepresentation::initializeWithShader(
     rep->setBinNumber(1);
     this->Internal->SliceReps.push_back(rep);
     this->Internal->AllReps.push_back(rep);
-    this->Internal->AppendFilter->AddInput(vtkSmartPointer<vtkPolyData>::New());
+    this->Internal->AppendFilter->AddInputData(vtkSmartPointer<vtkPolyData>::New());
   }
 
 }
@@ -216,7 +223,6 @@ void vesKiwiImageWidgetRepresentation::scrollImageSlice(double deltaX, double de
   vesSharedPtr<vesRenderer> ren = this->renderer();
   vesSharedPtr<vesCamera> camera = ren->camera();
   vesVector3f viewFocus = camera->focalPoint();
-  vesVector3f viewPoint = camera->position();
   vesVector3f viewFocusDisplay = ren->computeWorldToDisplay(viewFocus);
   float focalDepth = viewFocusDisplay[2];
 
@@ -297,6 +303,10 @@ bool vesKiwiImageWidgetRepresentation::handleSingleTouchPanGesture(double deltaX
 //----------------------------------------------------------------------------
 bool vesKiwiImageWidgetRepresentation::handleSingleTouchDown(int displayX, int displayY)
 {
+  if (!this->Internal->InteractionEnabled) {
+    return false;
+  }
+
   // calculate the focal depth so we'll know how far to move
   vesSharedPtr<vesRenderer> ren = this->renderer();
 
@@ -346,8 +356,17 @@ bool vesKiwiImageWidgetRepresentation::handleSingleTouchDown(int displayX, int d
 }
 
 //----------------------------------------------------------------------------
-bool vesKiwiImageWidgetRepresentation::handleDoubleTap()
+bool vesKiwiImageWidgetRepresentation::handleDoubleTap(int displayX, int displayY)
 {
+  vesNotUsed(displayX);
+  vesNotUsed(displayY);
+
+  if (!this->Internal->UseContour) {
+
+    this->Internal->InteractionEnabled = !this->Internal->InteractionEnabled;
+    return true;
+  }
+
   this->Internal->ContourVis = (this->Internal->ContourVis + 1) % 3;
   if (this->Internal->ContourVis == 0) {
     this->Internal->ContourRep->removeSelfFromRenderer(this->renderer());
@@ -393,31 +412,4 @@ void vesKiwiImageWidgetRepresentation::removeSelfFromRenderer(
   for (size_t i = 0; i < this->Internal->AllReps.size(); ++i) {
     this->Internal->AllReps[i]->removeSelfFromRenderer(renderer);
   }
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiImageWidgetRepresentation::numberOfFacets()
-{
-  int count = 0;
-  for (size_t i = 0; i < this->Internal->AllReps.size(); ++i)
-    count += this->Internal->AllReps[i]->numberOfFacets();
-  return count;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiImageWidgetRepresentation::numberOfVertices()
-{
-  int count = 0;
-  for (size_t i = 0; i < this->Internal->AllReps.size(); ++i)
-    count += this->Internal->AllReps[i]->numberOfVertices();
-  return count;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiImageWidgetRepresentation::numberOfLines()
-{
-  int count = 0;
-  for (size_t i = 0; i < this->Internal->AllReps.size(); ++i)
-    count += this->Internal->AllReps[i]->numberOfLines();
-  return count;
 }

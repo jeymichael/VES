@@ -17,6 +17,15 @@ struct vesPrimitiveRenderType
   };
 };
 
+struct vesPrimitiveIndicesValueType
+{
+  enum Type
+  {
+    UnsignedShort = GL_UNSIGNED_SHORT,
+    UnsignedInt = GL_UNSIGNED_INT
+  };
+};
+
 struct vesColorDataType
 {
   enum PixelFormat
@@ -67,6 +76,16 @@ struct vesDataType
     Sampler2DShadow = GL_SAMPLER_2D_SHADOW,
 
     Undefined = 0x0
+  };
+};
+
+
+struct vesBufferType
+{
+  enum Mode
+  {
+    Front = GL_FRONT,
+    Back = GL_BACK
   };
 };
 

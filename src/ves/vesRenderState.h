@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -42,6 +43,7 @@ public:
 
     this->m_modelViewMatrix   = this->m_identity;
     this->m_projectionMatrix  = this->m_identity;
+    this->m_viewSize = vesVector2f(0.0, 0.0);
   }
 
 
@@ -90,9 +92,12 @@ public:
     }
   }
 
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
   vesSharedPtr<vesMaterial> m_material;
   vesSharedPtr<vesMapper> m_mapper;
 
+  vesVector2f m_viewSize;
   vesMatrix4x4f *m_identity;
   vesMatrix4x4f *m_projectionMatrix;
   vesMatrix4x4f *m_modelViewMatrix;

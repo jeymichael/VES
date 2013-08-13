@@ -40,9 +40,11 @@ class vesRenderData;
 class vesRenderState;
 class vesShaderProgram;
 
-class vesMaterial
+class vesMaterial : public vesObject
 {
 public:
+  vesTypeMacro(vesMaterial);
+
   enum RenderHint
   {
     DefaultBin      = 0,
@@ -88,6 +90,11 @@ public:
     { return this->m_shaderProgram; }
   const vesSharedPtr<vesShaderProgram> shaderProgram() const
     { return this->m_shaderProgram; }
+
+  /// Set whether or not use vertex colors
+  bool enableVertexColor(bool value);
+  /// Get current state of vertex color flag
+  bool isEnabledVertexColor() const;
 
   /// Render the material
   virtual void render(const vesRenderState &renderState);

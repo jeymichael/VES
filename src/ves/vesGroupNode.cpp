@@ -33,6 +33,23 @@ vesGroupNode::~vesGroupNode()
 }
 
 
+bool vesGroupNode::setVisible(bool value)
+{
+  // Make sure to call base class implementation first
+  if(!vesNode::setVisible(value)) {
+    return false;
+  }
+
+  Children::iterator itr = this->m_children.begin();
+  for (; itr != this->m_children.end(); ++itr) {
+
+    (*itr)->setVisible(value);
+  }
+
+  return true;
+}
+
+
 bool vesGroupNode::addChild(vesSharedPtr<vesNode> child)
 {
   if (!child) {
@@ -167,6 +184,9 @@ void vesGroupNode::traverseChildrenAndUpdateBounds(vesVisitor &visitor)
     // Flag parents bounds dirty.
     this->m_parent->setBoundsDirty(true);
   }
+
+  // Since by now, we have updated the node bounds it is
+  // safe to mark that bounds are no longer dirty anymore
   this->setBoundsDirty(false);
 }
 
@@ -177,9 +197,13 @@ void vesGroupNode::updateBounds(vesNode &child)
     return;
   }
 
+  // FIXME: This check should not be required and possibly is incorrect
   if (child.isOverlayNode()) {
     return;
   }
+
+  // Make sure that child bounds are upto date
+  child.computeBounds();
 
   vesVector3f min = child.boundsMinimum();
   vesVector3f max = child.boundsMaximum();

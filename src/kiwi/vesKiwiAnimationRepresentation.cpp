@@ -200,6 +200,8 @@ void vesKiwiAnimationRepresentation::loadData(const std::string& filename)
 //----------------------------------------------------------------------------
 bool vesKiwiAnimationRepresentation::handleSingleTouchDown(int displayX, int displayY)
 {
+  vesNotUsed(displayY);
+
   int cornerSize = 50;
   if (displayX < cornerSize) {
 
@@ -227,7 +229,7 @@ bool vesKiwiAnimationRepresentation::handleSingleTouchUp()
 bool vesKiwiAnimationRepresentation::handleSingleTouchTap(int displayX, int displayY)
 {
   vesVector2f textSize = this->Internal->PlayRep->textureSize();
-  double margin = 10;
+  double margin = 30;
   textSize += vesVector2f(margin, margin);
 
   if (displayX <= textSize[0] && displayY <= textSize[1]) {
@@ -262,6 +264,8 @@ bool vesKiwiAnimationRepresentation::handleSingleTouchTap(int displayX, int disp
 //----------------------------------------------------------------------------
 bool vesKiwiAnimationRepresentation::handleSingleTouchPanGesture(double deltaX, double deltaY)
 {
+  vesNotUsed(deltaX);
+
   if (!this->interactionIsActive()) {
     return false;
   }
@@ -309,6 +313,7 @@ bool vesKiwiAnimationRepresentation::handleSingleTouchPanGesture(double deltaX, 
 //----------------------------------------------------------------------------
 void vesKiwiAnimationRepresentation::willRender(vesSharedPtr<vesRenderer> renderer)
 {
+  vesNotUsed(renderer);
 
   if (this->Internal->PlayMode) {
 
@@ -376,31 +381,4 @@ void vesKiwiAnimationRepresentation::removeSelfFromRenderer(vesSharedPtr<vesRend
 
   this->Internal->TextRep->removeSelfFromRenderer(renderer);
   this->Internal->PlayRep->removeSelfFromRenderer(renderer);
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiAnimationRepresentation::numberOfFacets()
-{
-  if (this->currentFrameRepresentation()) {
-    return this->currentFrameRepresentation()->numberOfFacets();
-  }
-  return 0;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiAnimationRepresentation::numberOfVertices()
-{
-  if (this->currentFrameRepresentation()) {
-    return this->currentFrameRepresentation()->numberOfVertices();
-  }
-  return 0;
-}
-
-//----------------------------------------------------------------------------
-int vesKiwiAnimationRepresentation::numberOfLines()
-{
-  if (this->currentFrameRepresentation()) {
-    return this->currentFrameRepresentation()->numberOfLines();
-  }
-  return 0;
 }

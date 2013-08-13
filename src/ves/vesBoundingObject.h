@@ -24,11 +24,13 @@
 #ifndef __vesBoundingObject_h
 #define __vesBoundingObject_h
 
+#include "vesObject.h"
+
 // VES includes
 #include "vesMath.h"
 #include "vesSetGet.h"
 
-class vesBoundingObject
+class vesBoundingObject : public vesObject
 {
 public:
   vesTypeMacro(vesBoundingObject);
@@ -56,6 +58,8 @@ public:
   bool boundsDirty() const { return this->m_boundsDirty; }
 
   void resetBounds();
+
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 protected:
   bool m_boundsDirty;

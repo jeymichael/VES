@@ -24,7 +24,7 @@
 #include  "vesGroupNode.h"
 #include "vesVisitor.h"
 
-vesNode::vesNode() : vesObject(),
+vesNode::vesNode() : vesBoundingObject(),
   m_visible (true),
   m_isOverlayNode(false),
   m_parent(0x0)
@@ -59,6 +59,38 @@ bool vesNode::setParent(vesGroupNode *parent)
   }
 
   this->m_parent = parent;
+
+  return true;
+}
+
+
+void vesNode::setParentBoundsDirty(bool value)
+{
+  if(this->m_parent) {
+    this->parent()->setBoundsDirty(value);
+  }
+}
+
+
+bool vesNode::parentBoundsDirty()
+{
+  if(this->m_parent) {
+    return this->parent()->boundsDirty();
+  }
+
+  return false;
+}
+
+
+bool vesNode::setVisible(bool value)
+{
+  // If node has a parent and if parent is not visible then at least now
+  // this node cannot be made visible (visibilty is forced inherited).
+  if(this->m_parent && !this->m_parent->isVisible() && value) {
+    return false;
+  }
+
+  this->m_visible = value;
 
   return true;
 }

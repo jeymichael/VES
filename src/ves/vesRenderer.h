@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -38,6 +39,7 @@
 
 // C++ includes
 #include <string>
+#include <vector>
 
 // Forward declarations
 class vesActor;
@@ -69,19 +71,27 @@ public:
   virtual void resize(int width,int height, float scale);
 
   /// Set background color of the renderer
-  virtual void setBackgroundColor(float r, float g, float b, float a=1.0f);
+  virtual void setBackgroundColor(const vesVector3f &color);
+  virtual void setBackgroundColor(const vesVector4f &color);
+  virtual void setBackgroundColor(float r, float g, float b);
+  virtual void setBackgroundColor(float r, float g, float b, float a);
 
-  /// Get background color of the renderer
+  /// Get background object of the renderer
   vesSharedPtr<vesBackground> background();
   const vesSharedPtr<vesBackground> background() const;
 
   /// Add new actor to the collection. This is required if the actor
   /// needs to be rendered by the renderer.
-  virtual void addActor   (vesSharedPtr<vesActor> actor);
+  virtual void addActor(vesSharedPtr<vesActor> actor);
 
   /// Remove the actor from the collection.This method will
   /// not trigger reset camera.
   virtual void removeActor(vesSharedPtr<vesActor> actor);
+
+  /// Returns a vector containing all actors in the scene.  The vector is created
+  /// by performing a depth first traversal starting at the scene root and adding
+  /// actor nodes to the vector as they are visited.
+  std::vector<vesSharedPtr<vesActor> > sceneActors() const;
 
   /// Get scene root. Do not change scene root or its data unless
   /// required in some special circumstances.
@@ -97,10 +107,10 @@ public:
   inline int height()  { return this->m_height; }
 
   /// Transform a vector in world space to display space
-  vesVector3f computeWorldToDisplay(vesVector3f world);
+  vesVector3f computeWorldToDisplay(const vesVector3f &world);
 
   /// Transform a vector in display space to world space
-  vesVector3f computeDisplayToWorld(vesVector3f display);
+  vesVector3f computeDisplayToWorld(const vesVector3f &display);
 
 protected:
 

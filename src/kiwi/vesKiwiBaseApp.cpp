@@ -19,7 +19,9 @@
  ========================================================================*/
 
 #include <vesKiwiBaseApp.h>
+#include <vesKiwiCameraInteractor.h>
 #include <vesCamera.h>
+#include <vesOpenGLSupport.h>
 #include <vesRenderer.h>
 #include <vesSetGet.h>
 #include <vesUniform.h>
@@ -34,6 +36,7 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include <iostream>
 
 //----------------------------------------------------------------------------
 class vesKiwiBaseApp::vesInternal
@@ -42,13 +45,19 @@ public:
 
   vesInternal()
   {
+    this->GLSupport = vesOpenGLSupport::Ptr(new vesOpenGLSupport());
+    this->Renderer = vesRenderer::Ptr(new vesRenderer());
+    this->CameraInteractor = vesKiwiCameraInteractor::Ptr(new vesKiwiCameraInteractor);
+    this->CameraInteractor->setRenderer(this->Renderer);
   }
 
   ~vesInternal()
   {
   }
 
-  vesSharedPtr<vesRenderer> Renderer;
+  vesOpenGLSupport::Ptr GLSupport;
+  vesRenderer::Ptr Renderer;
+  vesKiwiCameraInteractor::Ptr CameraInteractor;
 
   std::vector< vesSharedPtr<vesShaderProgram> > ShaderPrograms;
   std::vector< vesSharedPtr<vesShader> > Shaders;
@@ -60,13 +69,31 @@ public:
 vesKiwiBaseApp::vesKiwiBaseApp()
 {
   this->Internal = new vesInternal();
-  this->Internal->Renderer = vesSharedPtr<vesRenderer>(new vesRenderer());
 }
 
 //----------------------------------------------------------------------------
 vesKiwiBaseApp::~vesKiwiBaseApp()
 {
   delete this->Internal;
+}
+
+//----------------------------------------------------------------------------
+void vesKiwiBaseApp::initGL()
+{
+  if (this->Internal->GLSupport->isInitialized()) {
+    std::cerr << "error: initGL() has already been called" << std::endl;
+    return;
+  }
+  this->Internal->GLSupport->initialize();
+}
+
+//----------------------------------------------------------------------------
+vesOpenGLSupport::Ptr vesKiwiBaseApp::glSupport()
+{
+  if (!this->Internal->GLSupport->isInitialized()) {
+    std::cerr << "error: glSupport() called before initGL()" << std::endl;
+  }
+  return this->Internal->GLSupport;
 }
 
 //----------------------------------------------------------------------------
@@ -100,6 +127,18 @@ void vesKiwiBaseApp::resizeView(int width, int height)
 //----------------------------------------------------------------------------
 void vesKiwiBaseApp::resetView()
 {
+  this->resetView(vesVector3f(0.0, 0.0, -1.0), vesVector3f(0.0, 1.0, 0.0));
+}
+
+//----------------------------------------------------------------------------
+vesKiwiCameraInteractor::Ptr vesKiwiBaseApp::cameraInteractor() const
+{
+  return this->Internal->CameraInteractor;
+}
+
+//----------------------------------------------------------------------------
+void vesKiwiBaseApp::resetView(const vesVector3f& viewDirection, const vesVector3f& viewUp)
+{
   // this is just confusing...
   // We want to set the direction to look from and view up
   // then we want to dolly the camera so that the surface takes up
@@ -111,70 +150,48 @@ void vesKiwiBaseApp::resetView()
   // set direction to look from
   vesSharedPtr<vesRenderer> renderer = this->Internal->Renderer;
 
-  renderer->camera()->setViewPlaneNormal(vesVector3f(0.0, 0.0, 1.0));
+  renderer->camera()->setViewPlaneNormal(-viewDirection);
 
   // dolly so that scene fits window
   renderer->resetCamera();
 
-  // The current ResetCamera() method pulls the camera back further than
-  // required.  ResetCamera should be fixed.  Until then, perform a dolly
-  // with a scale factor of 1.5 (a magic number).
-  renderer->camera()->dolly(1.5);
-
   // now set the view plane normal
-  renderer->camera()->setViewUp(vesVector3f(0.0, 1.0, 0.0));
+  renderer->camera()->setViewUp(viewUp);
   renderer->camera()->orthogonalizeViewUp();
 }
 
 //----------------------------------------------------------------------------
 void vesKiwiBaseApp::handleTwoTouchPanGesture(double x0, double y0, double x1, double y1)
 {
-  // calculate the focal depth so we'll know how far to move
-  vesSharedPtr<vesRenderer> ren = this->Internal->Renderer;
-  std::tr1::shared_ptr<vesCamera> camera = ren->camera();
-  vesVector3f viewFocus = camera->focalPoint();
-  vesVector3f viewPoint = camera->position();
-  vesVector3f viewFocusDisplay = ren->computeWorldToDisplay(viewFocus);
-  float focalDepth = viewFocusDisplay[2];
-
-  // map change into world coordinates
-  vesVector3f oldPickPoint = ren->computeDisplayToWorld(vesVector3f(x0, y0, focalDepth));
-  vesVector3f newPickPoint = ren->computeDisplayToWorld(vesVector3f(x1, y1, focalDepth));
-  vesVector3f motionVector = oldPickPoint - newPickPoint;
-
-  vesVector3f newViewFocus = viewFocus + motionVector;
-  vesVector3f newViewPoint = viewPoint + motionVector;
-  camera->setFocalPoint(newViewFocus);
-  camera->setPosition(newViewPoint);
+  this->Internal->CameraInteractor->pan(vesVector2d(x0, y0), vesVector2d(x1, y1));
 }
 
 //----------------------------------------------------------------------------
 void vesKiwiBaseApp::handleSingleTouchPanGesture(double deltaX, double deltaY)
 {
-  //
-  // Rotate camera
-  // Based on vtkInteractionStyleTrackballCamera::Rotate().
-  //
-  vesSharedPtr<vesRenderer> ren = this->Internal->Renderer;
-  std::tr1::shared_ptr<vesCamera> camera = ren->camera();
-
-  double delta_elevation = -20.0 / ren->height();
-  double delta_azimuth   = -20.0 / ren->width();
-
-  double motionFactor = 10.0;
-
-  double rxf = deltaX * delta_azimuth * motionFactor;
-  double ryf = deltaY * delta_elevation * motionFactor;
-
-  camera->azimuth(rxf);
-  camera->elevation(ryf);
-  camera->orthogonalizeViewUp();
+  this->Internal->CameraInteractor->rotate(vesVector2d(deltaX, deltaY));
 }
 
 
 //----------------------------------------------------------------------------
-void vesKiwiBaseApp::handleDoubleTap()
+void vesKiwiBaseApp::handleSingleTouchTap(int displayX, int displayY)
 {
+  vesNotUsed(displayX);
+  vesNotUsed(displayY);
+}
+
+//----------------------------------------------------------------------------
+void vesKiwiBaseApp::handleDoubleTap(int displayX, int displayY)
+{
+  vesNotUsed(displayX);
+  vesNotUsed(displayY);
+}
+
+//----------------------------------------------------------------------------
+void vesKiwiBaseApp::handleLongPress(int displayX, int displayY)
+{
+  vesNotUsed(displayX);
+  vesNotUsed(displayY);
 }
 
 //----------------------------------------------------------------------------
@@ -192,15 +209,13 @@ void vesKiwiBaseApp::handleSingleTouchDown(int displayX, int displayY)
 //----------------------------------------------------------------------------
 void vesKiwiBaseApp::handleTwoTouchPinchGesture(double scale)
 {
-  this->Internal->Renderer->camera()->dolly(scale);
+  this->Internal->CameraInteractor->dolly(scale);
 }
 
 //----------------------------------------------------------------------------
 void vesKiwiBaseApp::handleTwoTouchRotationGesture(double rotation)
 {
-  std::tr1::shared_ptr<vesCamera> camera = this->Internal->Renderer->camera();
-  camera->roll(rotation * 180.0 / M_PI);
-  camera->orthogonalizeViewUp();
+  this->Internal->CameraInteractor->roll(rotation);
 }
 
 //----------------------------------------------------------------------------

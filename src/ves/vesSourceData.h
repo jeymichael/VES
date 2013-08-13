@@ -4,6 +4,7 @@
       http://www.kitware.com/ves
 
   Copyright 2011 Kitware, Inc.
+  Copyright 2012 Willow Garage, Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -50,6 +51,11 @@ struct vesVertexDataC3f
   vesVector3f m_color;
 };
 
+struct vesVertexDataC4f
+{
+  vesVector4f m_color;
+};
+
 struct vesVertexDataT2f
 {
   vesVector2f m_textureCoordinate;
@@ -80,7 +86,7 @@ struct vesVertexDataP3N3C3f
   vesVector3f m_color;
 };
 
-struct vesVertexDataP3N3TC3f
+struct vesVertexDataP3N3T3C3f
 {
   vesVector3f m_position;
   vesVector3f m_normal;
@@ -95,6 +101,13 @@ struct vesVertexDataP3N3T3C3S3f
   vesVector3f m_texureCoordinates;
   vesVector3f m_color;
   vesVector3f m_scalar;
+};
+
+struct vesVertexDataP3T3C3f
+{
+  vesVector3f m_position;
+  vesVector3f m_texureCoordinates;
+  vesVector3f m_color;
 };
 
 struct vesVertexDataf
@@ -137,6 +150,11 @@ public:
   typedef AttributeMap::iterator AttributeIterator;
   typedef AttributeMap::const_iterator AttributeConstIterator;
 
+  virtual ~vesSourceData()
+  {
+    // Nothing to delete
+  }
+
   virtual void* data() = 0;
   virtual unsigned int sizeOfArray() const = 0;
   virtual unsigned int sizeInBytes() const = 0;
@@ -163,6 +181,8 @@ public:
 
   virtual int attributeStride(int key) const = 0;
   virtual bool setAttributeStride(int key, int stride) = 0;
+
+  virtual void duplicateElements(const std::vector<unsigned int>& indices) = 0;
 };
 
 /// Generic implementation for the source data
@@ -175,6 +195,15 @@ public:
   virtual ~vesGenericSourceData()
   {
   }
+
+  virtual void duplicateElements(const std::vector<unsigned int>& indices)
+  {
+    size_t nIndices = indices.size();
+    for (size_t i = 0; i < nIndices; ++i) {
+      this->m_data.push_back(this->m_data[indices[i]]);
+    }
+  }
+
 
   /// Use this method with caution
   inline std::vector<T>& arrayReference()
@@ -397,6 +426,41 @@ public:
   }
 };
 
+class vesGenericSourceData3f : public vesGenericSourceData<vesVector3f>
+{
+public:
+  vesTypeMacro(vesGenericSourceData3f);
+
+  vesGenericSourceData3f(int key) : vesGenericSourceData<vesVector3f>()
+  {
+    const int totalNumberOfFloats = 3;
+    const int stride = sizeof(float) * totalNumberOfFloats;
+
+    this->setAttributeDataType(key, vesDataType::Float);
+    this->setAttributeOffset(key, 0);
+    this->setAttributeStride(key, stride);
+    this->setNumberOfComponents(key, 3);
+    this->setSizeOfAttributeDataType(key, sizeof(float));
+    this->setIsAttributeNormalized(key, false);
+  }
+};
+
+class vesGenericSourceData1f : public vesGenericSourceData<float>
+{
+public:
+  vesTypeMacro(vesGenericSourceData1f);
+
+  vesGenericSourceData1f(int key) : vesGenericSourceData<float>()
+  {
+    this->setAttributeDataType(key, vesDataType::Float);
+    this->setAttributeOffset(key, 0);
+    this->setAttributeStride(key, sizeof(float));
+    this->setNumberOfComponents(key, 1);
+    this->setSizeOfAttributeDataType(key, sizeof(float));
+    this->setIsAttributeNormalized(key, false);
+  }
+};
+
 class vesSourceDataf : public vesGenericSourceData<vesVertexDataf>
 {
 public:
@@ -449,6 +513,25 @@ public:
     this->setAttributeOffset(vesVertexAttributeKeys::Color, 0);
     this->setAttributeStride(vesVertexAttributeKeys::Color, stride);
     this->setNumberOfComponents(vesVertexAttributeKeys::Color, 3);
+    this->setSizeOfAttributeDataType(vesVertexAttributeKeys::Color, sizeof(float));
+    this->setIsAttributeNormalized(vesVertexAttributeKeys::Color, false);
+  }
+};
+
+class vesSourceDataC4f : public vesGenericSourceData<vesVertexDataC4f>
+{
+public:
+  vesTypeMacro(vesSourceDataC4f);
+
+  vesSourceDataC4f() : vesGenericSourceData<vesVertexDataC4f>()
+  {
+    const int totalNumberOfFloats = 4;
+    const int stride = sizeof(float) * totalNumberOfFloats;
+
+    this->setAttributeDataType(vesVertexAttributeKeys::Color, vesDataType::Float);
+    this->setAttributeOffset(vesVertexAttributeKeys::Color, 0);
+    this->setAttributeStride(vesVertexAttributeKeys::Color, stride);
+    this->setNumberOfComponents(vesVertexAttributeKeys::Color, 4);
     this->setSizeOfAttributeDataType(vesVertexAttributeKeys::Color, sizeof(float));
     this->setIsAttributeNormalized(vesVertexAttributeKeys::Color, false);
   }
@@ -548,5 +631,35 @@ public:
   }
 };
 
+class vesSourceDataP3T3C3f : public vesGenericSourceData<vesVertexDataP3T3C3f>
+{
+public:
+  vesTypeMacro(vesSourceDataP3T3C3f);
+
+  vesSourceDataP3T3C3f() : vesGenericSourceData<vesVertexDataP3T3C3f>()
+  {
+    const int totalNumberOfFloats = 9;
+    const int stride = sizeof(float) * totalNumberOfFloats;
+
+    this->setAttributeDataType(vesVertexAttributeKeys::Position, vesDataType::Float);
+    this->setAttributeDataType(vesVertexAttributeKeys::TextureCoordinate, vesDataType::Float);
+    this->setAttributeDataType(vesVertexAttributeKeys::Color, vesDataType::Float);
+    this->setAttributeOffset(vesVertexAttributeKeys::Position, 0);
+    this->setAttributeOffset(vesVertexAttributeKeys::TextureCoordinate, 12);
+    this->setAttributeOffset(vesVertexAttributeKeys::Color, 24);
+    this->setAttributeStride(vesVertexAttributeKeys::Position, stride);
+    this->setAttributeStride(vesVertexAttributeKeys::TextureCoordinate, stride);
+    this->setAttributeStride(vesVertexAttributeKeys::Color, stride);
+    this->setNumberOfComponents(vesVertexAttributeKeys::Position, 3);
+    this->setNumberOfComponents(vesVertexAttributeKeys::TextureCoordinate, 3);
+    this->setNumberOfComponents(vesVertexAttributeKeys::Color, 3);
+    this->setSizeOfAttributeDataType(vesVertexAttributeKeys::Position, sizeof(float));
+    this->setSizeOfAttributeDataType(vesVertexAttributeKeys::TextureCoordinate, sizeof(float));
+    this->setSizeOfAttributeDataType(vesVertexAttributeKeys::Color, sizeof(float));
+    this->setIsAttributeNormalized(vesVertexAttributeKeys::Position, false);
+    this->setIsAttributeNormalized(vesVertexAttributeKeys::TextureCoordinate, false);
+    this->setIsAttributeNormalized(vesVertexAttributeKeys::Color, false);
+  }
+};
 
 #endif // VESSOURCEDATA_H
