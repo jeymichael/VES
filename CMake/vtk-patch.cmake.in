@@ -45,6 +45,21 @@ foreach(pattern_file ${pattern_files})
   endif()
 endforeach()
 
+ # Patch vtk IO/Geometry for vtkFluentReader as building it chokes on certain systems
+file(GLOB pattern_files RELATIVE @ves_patch_dir@/Geometry "@ves_patch_dir@/Geometry/*.*" )
+foreach(pattern_file ${pattern_files})
+  execute_process(
+    COMMAND @CMAKE_COMMAND@ -E copy_if_different @ves_patch_dir@/Geometry/${pattern_file}
+      @vtk_src_dir@/IO/Geometry/${pattern_file}
+  )
+  if(NOT ${res} EQUAL 0)
+    message(FATAL_ERROR "Error applying patch for Geometry")
+    message("Output: ${out}; Result: ${res}; Error: ${err}")
+  endif()
+
+endforeach()
+
+
 # Patch cmake
 file(GLOB pattern_files RELATIVE @ves_patch_dir@/cmake "@ves_patch_dir@/cmake/*.*" )
 foreach(pattern_file ${pattern_files})
