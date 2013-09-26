@@ -16,9 +16,9 @@ find_program(CMAKE_CXX_COMPILER NAME g++
   /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/
   NO_DEFAULT_PATH)
 
-set(CMAKE_OSX_ARCHITECTURES armv7)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__IPHONE_OS_VERSION_MIN_REQUIRED=40300")
-
+set(CMAKE_OSX_ARCHITECTURES "armv7;armv7s")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -miphoneos-version-min=5.0 -fvisibility=hidden -fvisibility-inlines-hidden")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -miphoneos-version-min=5.0 -fvisibility=hidden -fvisibility-inlines-hidden")
 
 # Set the CMAKE_OSX_SYSROOT to the latest SDK found
 set(CMAKE_OSX_SYSROOT)
@@ -28,7 +28,7 @@ set(possible_sdk_roots
   /Developer/Platforms/iPhoneOS.platform/Developer/SDKs
   )
 foreach(sdk_root ${possible_sdk_roots})
-  foreach(sdk iPhoneOS4.3.sdk iPhoneOS5.0.sdk iPhoneOS5.1.sdk iPhoneOS6.0.sdk iPhoneOS6.1.sdk)
+  foreach(sdk iPhoneOS4.3.sdk iPhoneOS5.0.sdk iPhoneOS5.1.sdk iPhoneOS6.0.sdk iPhoneOS6.1.sdk iPhoneOS7.0.sdk)
     if (EXISTS ${sdk_root}/${sdk} AND IS_DIRECTORY ${sdk_root}/${sdk})
       set(CMAKE_OSX_SYSROOT ${sdk_root}/${sdk})
     endif()

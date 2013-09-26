@@ -17,7 +17,8 @@ find_program(CMAKE_CXX_COMPILER NAME g++
   NO_DEFAULT_PATH)
 
 set(CMAKE_OSX_ARCHITECTURES i386)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__IPHONE_OS_VERSION_MIN_REQUIRED=40300")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mios-simulator-version-min=5.0 -fvisibility=hidden -fvisibility-inlines-hidden")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mios-simulator-version-min=5.0 -fvisibility=hidden -fvisibility-inlines-hidden")
 
 # Set the CMAKE_OSX_SYSROOT to the latest SDK found
 set(CMAKE_OSX_SYSROOT)
@@ -27,7 +28,7 @@ set(possible_sdk_roots
   /Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs
   )
 foreach(sdk_root ${possible_sdk_roots})
-  foreach(sdk iPhoneSimulator4.3.sdk iPhoneSimulator5.0.sdk iPhoneSimulator5.1.sdk iPhoneSimulator6.0.sdk iPhoneSimulator6.1.sdk)
+  foreach(sdk iPhoneSimulator4.3.sdk iPhoneSimulator5.0.sdk iPhoneSimulator5.1.sdk iPhoneSimulator6.0.sdk iPhoneSimulator6.1.sdk iPhoneSimulator7.0.sdk)
     if (EXISTS ${sdk_root}/${sdk} AND IS_DIRECTORY ${sdk_root}/${sdk})
       set(CMAKE_OSX_SYSROOT ${sdk_root}/${sdk})
     endif()
