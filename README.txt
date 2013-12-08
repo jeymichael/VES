@@ -8,13 +8,13 @@ to mobile application developers.
 
 Licensing
 =========
-- For VES license please refer LICENSE.txt
+- For the VES license please refer to the LICENSE.txt file.
 
-- VES uses Eigen and Eigen is LGPL license. Please visit
-  http://eigen.tuxfamily.org/index.php?title=Licensing_FAQ for more
-  information on Eigen licensing.
+- VES uses Eigen, it is an open-source project licensed under MPL 2.0.
+  Please visit http://eigen.tuxfamily.org/index.php?title=Licensing_FAQ for
+  more information on Eigen licensing.
 
-- VES uses VTK. VTK is an open-source toolkit licensed under the BSD license.
+- VES uses VTK. it is an open-source toolkit licensed under 3-clause BSD.
   Please visit http://www.vtk.org/VTK/project/license.html for more information
   on VTK licensing.
 
