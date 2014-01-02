@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
 project(KiwiViewer C CXX)
 
+# Work around bug in CMakeFindEclipseCDT4.cmake since this is a cross
+# compile UNIX is set, but make program is nmake which does not
+# take -jN...
+if( "${CMAKE_MAKE_PROGRAM}" MATCHES nmake)
+  set(CMAKE_ECLIPSE_MAKE_ARGUMENTS "")
+endif()
+
 if (CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "Kiwi does not support in-source builds :) .")
 endif ()
@@ -24,7 +31,7 @@ if(NOT ANDROID_EXECUTABLE)
   message(FATAL_ERROR "Can not find android command line tool: android")
 endif()
 
-set(ANDROID_TARGET "android-16"
+set(ANDROID_TARGET "android-18"
   CACHE STRING "The Android API to target")
 
 configure_file(
