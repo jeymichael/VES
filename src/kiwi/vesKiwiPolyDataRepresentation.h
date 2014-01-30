@@ -66,8 +66,8 @@ public:
   const vesVector4f& color() const;
   vesVector4f& color();
 
-  const double& opacity() const;
-  void setOpacity(const double& opacity);
+  double opacity() const;
+  void setOpacity(double opacity);
 
   int pointSize() const;
   void setPointSize(int size);
