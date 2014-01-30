@@ -411,13 +411,13 @@ vesVector4f& vesKiwiPolyDataRepresentation::color()
 }
 
 //----------------------------------------------------------------------------
-const double& vesKiwiPolyDataRepresentation::opacity() const
+double vesKiwiPolyDataRepresentation::opacity() const
 {
   return this->Internal->Actor->mapper()->color()[3];
 }
 
 //----------------------------------------------------------------------------
-void vesKiwiPolyDataRepresentation::setOpacity(const double& opacity)
+void vesKiwiPolyDataRepresentation::setOpacity(double opacity)
 {
   float* color = this->Internal->Actor->mapper()->color();
   this->Internal->Actor->mapper()->setColor(color[0], color[1], color[2], opacity);
