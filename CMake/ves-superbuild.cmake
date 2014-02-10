@@ -178,8 +178,8 @@ endmacro()
 macro(download_curl)
   ExternalProject_Add(
     curl-download
-    GIT_REPOSITORY git://github.com/patmarion/curl.git
-    GIT_TAG origin/v7.24.0-with-cmake-patches
+    GIT_REPOSITORY git://github.com/bagder/curl.git
+    GIT_TAG curl-7_34_0
     SOURCE_DIR ${source_prefix}/curl
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
