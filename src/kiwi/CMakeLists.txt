@@ -42,6 +42,7 @@ set(deps
   vtkImagingCore
   vtkRenderingCore
   vtkRenderingFreeType
+  vtksys
   )
 
 option(VES_USE_CURL "Build VES with cURL support?" ON)
