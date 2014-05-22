@@ -26,7 +26,6 @@ set(sources
 
 set(deps
   GLESv2
-  log
   ${VES_LIBRARIES}
   ${ZLIB_LIBRARIES}
   log
