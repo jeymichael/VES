@@ -149,13 +149,13 @@ vesMatrix4x4f vesCamera::computeProjectionTransform(float aspect,
     double ymin = ( this->m_windowCenter[1] - 1.0 ) * height;
     double ymax = ( this->m_windowCenter[1] + 1.0 ) * height;
 
-    vesMatrix4x4f frustum = vesFrustum( xmin, xmax, ymin, ymax,
-                                        this->m_clippingRange[0],
-                                        this->m_clippingRange[1] );
+    vesMatrix4x4f frustum = vesFrustum(xmin, xmax, ymin, ymax,
+                                       this->m_clippingRange[0],
+                                       this->m_clippingRange[1]);
+
     return matrix * frustum;
   }
 }
-
 
 // Rotate the camera about the view up vector centered at the focal point.
 void vesCamera::azimuth(double angle)

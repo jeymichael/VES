@@ -98,7 +98,8 @@ void vesCullVisitor::visit(vesCamera &camera)
   this->pushModelViewMatrix(matrix);
 
   if (camera.referenceFrame() == vesTransformNode::Relative) {
-    this->pushProjectionMatrix(this->projectionMatrix() * camera.projectionMatrix());
+    this->pushProjectionMatrix(this->projectionMatrix() *
+                               camera.projectionMatrix());
   } else {
     this->pushProjectionMatrix(camera.projectionMatrix());
   }
