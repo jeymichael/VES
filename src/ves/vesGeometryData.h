@@ -181,6 +181,10 @@ public:
   void computeBounds();
 
   /// Override bounds
+  /// This avoids implicit calculation of the bounds from the position
+  /// array.  This is useful if (1) the shader modifies the vertex locations
+  /// (2) the position vector is not a float array in world coordinates
+  /// or (3) one dimension of the dataset is degenerate
   void setBounds(vesVector3f min, vesVector3f max);
 
   /// Compute normals (per vertex) if possible
