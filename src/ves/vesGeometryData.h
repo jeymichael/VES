@@ -180,6 +180,9 @@ public:
   /// Compute geometry bounds
   void computeBounds();
 
+  /// Override bounds
+  void setBounds(vesVector3f min, vesVector3f max);
+
   /// Compute normals (per vertex) if possible
   template<typename T>
   void computeNormals();

@@ -3,6 +3,14 @@
 
 #include <cassert>
 
+void vesGeometryData::setBounds(vesVector3f min, vesVector3f max)
+{
+  this->m_computeBounds = false;
+
+  this->m_boundsMin = min;
+  this->m_boundsMax = max;
+}
+
 void vesGeometryData::computeBounds()
 {
   if (!this->m_computeBounds) {
