@@ -6,6 +6,34 @@ mobile devices using OpenGL ES 2.0. VES integrates with the Visualization
 Toolkit (VTK) to deliver scientific and medical visualization capabilities
 to mobile application developers.
 
+Patches
+=======
+Using http://www.kitware.com/blog/home/post/538
+Added the Android.mk, Application.mk for the jni builds.
+
+Build steps:
+
+export ANDROID_HOME=<android-sdk-path>
+export ANDROID_NDK=<android-ndk-path>
+export PATH=<android-sdk-path>/platform-tools:$PATH
+export PATH=<android-sdk-path>/tools:$PATH
+
+Building VES:
+
+cd Apps/Android/CMakeBuild
+cmake -P configure.cmake
+cd build
+make -j4
+
+Building JNI library for KiwiViewer:
+
+cd Apps/Android/Kiwi/jni
+<android-ndk-path>/ndk-build
+
+Building KiwiViewer Android app:
+cd Apps/Android/Kiwi
+ant debug install
+
 Licensing
 =========
 - For VES license please refer LICENSE.txt
